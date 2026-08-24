@@ -1,0 +1,47 @@
+services:
+  db:
+    image: ${POSTGRES_IMAGE}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:${POSTGRES_DATA_DIR}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p ${POSTGRES_PORT}"]
+      interval: ${DB_HEALTHCHECK_INTERVAL}
+      timeout: ${DB_HEALTHCHECK_TIMEOUT}
+      retries: ${DB_HEALTHCHECK_RETRIES}
+
+  api:
+    build:
+      context: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      MODEL_CACHE_DIR: ${DOCKER_MODEL_CACHE_DIR}
+      MODEL_READY_FILE: ${DOCKER_MODEL_READY_FILE}
+      API_HOST: ${API_HOST}
+      API_CONTAINER_PORT: ${API_CONTAINER_PORT}
+      MAX_DOCUMENT_CHARS: ${MAX_DOCUMENT_CHARS}
+      MAX_CHUNKS: ${MAX_CHUNKS}
+      CHUNK_SIZE: ${CHUNK_SIZE}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP}
+      SEARCH_LIMIT_DEFAULT: ${SEARCH_LIMIT_DEFAULT}
+      SEARCH_LIMIT_MAX: ${SEARCH_LIMIT_MAX}
+      FTS_BOOST: ${FTS_BOOST}
+      HF_HUB_OFFLINE: ${DOCKER_HF_HUB_OFFLINE}
+      TRANSFORMERS_OFFLINE: ${DOCKER_TRANSFORMERS_OFFLINE}
+    ports:
+      - "${API_PORT}:${API_CONTAINER_PORT}"
+    volumes:
+      - model_cache:${DOCKER_MODEL_CACHE_DIR}
+
+volumes:
+  postgres_data:
+    name: ${POSTGRES_VOLUME}
+  model_cache:
+    name: ${MODEL_VOLUME}
