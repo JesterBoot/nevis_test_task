@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
@@ -10,9 +9,7 @@ def main() -> None:
     settings = get_settings()
     cache_dir = Path(settings.model_cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
-    ready_file = Path(
-        os.getenv("MODEL_READY_FILE", cache_dir / ".model-ready")
-    )
+    ready_file = settings.model_ready_file or cache_dir / ".model-ready"
 
     SentenceTransformer(
         settings.embedding_model,

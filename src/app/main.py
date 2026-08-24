@@ -1,8 +1,6 @@
 from fastapi import FastAPI
 
-
 from app.core.custom_logging import configure_logging
-
 
 configure_logging()
 
@@ -11,7 +9,6 @@ def create_app() -> FastAPI:
     return FastAPI(
         title="Nevis Backend API",
         version="0.1.0",
-        description="MVP client and document search API.",
     )
 
 

@@ -1,10 +1,10 @@
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
+from sqlmodel import SQLModel
 
+from alembic import context
 from app.core.config import get_settings
-
 
 config = context.config
 
@@ -14,8 +14,7 @@ if config.config_file_name is not None:
 settings = get_settings()
 config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
-# B1 will replace this with the application's SQLAlchemy metadata.
-target_metadata = None
+target_metadata = SQLModel.metadata
 
 
 def run_migrations_offline() -> None:

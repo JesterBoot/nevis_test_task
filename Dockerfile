@@ -10,6 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MODEL_CACHE_DIR=/opt/models \
     HF_HOME=/opt/models \
     SENTENCE_TRANSFORMERS_HOME=/opt/models \
+    PYTHONPATH=/app/src \
     HF_HUB_OFFLINE=1 \
     TRANSFORMERS_OFFLINE=1
 
@@ -19,7 +20,7 @@ RUN python -m pip install --upgrade pip \
     && python -m pip install "uv==${UV_VERSION}"
 
 COPY pyproject.toml uv.lock README.md ./
-COPY app ./app
+COPY src ./src
 COPY scripts ./scripts
 
 RUN uv sync --locked --no-dev
@@ -31,13 +32,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MODEL_CACHE_DIR=/opt/models \
     HF_HOME=/opt/models \
     SENTENCE_TRANSFORMERS_HOME=/opt/models \
+    PYTHONPATH=/app/src \
     HF_HUB_OFFLINE=1 \
     TRANSFORMERS_OFFLINE=1
 
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
-COPY app ./app
+COPY src ./src
 COPY scripts ./scripts
 COPY alembic.ini ./
 COPY alembic ./alembic

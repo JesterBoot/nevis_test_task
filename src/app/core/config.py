@@ -1,8 +1,11 @@
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+load_dotenv(override=False)
 
 
 class Settings(BaseSettings):
@@ -14,8 +17,14 @@ class Settings(BaseSettings):
     )
 
     database_url: str = "sqlite:///./nevis.db"
+    db_pool_size: int = Field(default=5, gt=0)
+    db_max_overflow: int = Field(default=10, ge=0)
+    db_pool_timeout: int = Field(default=30, gt=0)
+    db_pool_recycle: int = Field(default=1_800, gt=0)
+    db_pool_pre_ping: bool = True
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     model_cache_dir: Path = Path("./model-cache")
+    model_ready_file: Path | None = None
 
     max_document_chars: int = Field(default=50_000, gt=0)
     max_chunks: int = Field(default=100, gt=0)
