@@ -1,9 +1,8 @@
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from pgvector.sqlalchemy import Vector
-
 from alembic import op
+from pgvector.sqlalchemy import Vector
 
 revision: str = "b10000000001"
 down_revision: str | None = None

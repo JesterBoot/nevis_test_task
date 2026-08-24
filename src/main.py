@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.core.custom_logging import configure_logging
+from core.custom_logging import configure_logging
 
 configure_logging()
 

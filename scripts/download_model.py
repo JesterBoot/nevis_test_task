@@ -2,7 +2,7 @@ from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
 
-from app.core.config import get_settings
+from core.config import get_settings
 
 
 def main() -> None:

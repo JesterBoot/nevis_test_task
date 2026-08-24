@@ -5,10 +5,11 @@
 UV ?= uv
 DC ?= docker compose
 API_SERVICE ?= api
-APP_MODULE ?= app.main:app
+APP_MODULE ?= main:app
 APP_HOST ?= 0.0.0.0
 APP_PORT ?= 8080
 ALEMBIC ?= $(UV) run alembic
+ALEMBIC_CONFIG ?= src/alembic.ini
 
 install:
 	$(UV) sync
@@ -20,11 +21,11 @@ test-db:
 	$(UV) run pytest tests/test_database.py
 
 compile:
-	$(UV) run python -m compileall -q src alembic tests
+	$(UV) run python -m compileall -q src tests
 
 check:
 	$(UV) lock --check
-	$(UV) run ruff check src tests scripts alembic
+	$(UV) run ruff check src tests scripts
 	$(MAKE) compile
 	$(MAKE) test
 
@@ -35,16 +36,21 @@ run:
 		--reload
 
 migrate:
-	$(DC) exec $(API_SERVICE) /app/.venv/bin/alembic upgrade head
+	$(DC) exec $(API_SERVICE) /app/.venv/bin/alembic \
+		-c /app/src/alembic.ini \
+		upgrade head
 
 downgrade-migration:
-	$(DC) exec $(API_SERVICE) /app/.venv/bin/alembic downgrade -1
+	$(DC) exec $(API_SERVICE) /app/.venv/bin/alembic \
+		-c /app/src/alembic.ini \
+		downgrade -1
 
 make-migration:
-	$(ALEMBIC) revision --autogenerate -m "$(or $(name),migration)"
+	$(ALEMBIC) -c $(ALEMBIC_CONFIG) \
+		revision --autogenerate -m "$(or $(name),migration)"
 
 show-heads:
-	$(ALEMBIC) heads
+	$(ALEMBIC) -c $(ALEMBIC_CONFIG) heads
 
 docker-config:
 	$(DC) config

@@ -2,8 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from app.core.config import Settings
-from app.main import create_app
+from core.config import Settings
+from main import create_app
 
 
 def test_application_imports_without_database_connection() -> None:

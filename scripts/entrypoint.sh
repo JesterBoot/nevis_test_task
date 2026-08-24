@@ -27,6 +27,6 @@ export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 
 exec /app/.venv/bin/uvicorn \
-    app.main:app \
+    main:app \
     --host "${API_HOST}" \
     --port "${API_CONTAINER_PORT}"

@@ -13,7 +13,7 @@ from sqlalchemy import (
 from sqlmodel import Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from app.models import Document
+    from models import Document
 
 
 class DocumentChunk(SQLModel, table=True):

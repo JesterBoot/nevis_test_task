@@ -5,8 +5,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession as _AsyncSession
 
-from app.core.config import Settings, get_settings
-from app.core.custom_logging import get_logger
+from core.config import Settings, get_settings
+from core.custom_logging import get_logger
 
 logger = get_logger()
 _settings = get_settings()

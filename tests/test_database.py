@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from alembic import command
 from alembic.config import Config
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, delete, inspect
@@ -11,10 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from alembic import command
-from app.core.config import Settings, get_settings
-from app.db.session import AsyncSession, build_async_engine
-from app.models import Client, Document, DocumentChunk
+from core.config import Settings, get_settings
+from db.session import AsyncSession, build_async_engine
+from models import Client, Document, DocumentChunk
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(override=False)
@@ -30,7 +30,7 @@ pytestmark = [
 
 
 def _alembic_config() -> Config:
-    config = Config(str(PROJECT_ROOT / "alembic.ini"))
+    config = Config(str(PROJECT_ROOT / "src" / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
     return config
 

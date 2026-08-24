@@ -6,7 +6,7 @@ from sqlalchemy import Index, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 if TYPE_CHECKING:
-    from app.models import Document
+    from models import Document
 
 
 class Client(SQLModel, table=True):

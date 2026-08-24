@@ -6,7 +6,7 @@ from sqlalchemy import ForeignKey, Text, Uuid
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 if TYPE_CHECKING:
-    from app.models import Client, DocumentChunk
+    from models import Client, DocumentChunk
 
 
 class Document(SQLModel, table=True):

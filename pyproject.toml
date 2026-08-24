@@ -37,7 +37,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["app*"]
+include = ["core*", "db*", "models*"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
@@ -50,3 +50,4 @@ testpaths = ["tests"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+py-modules = ["main"]

@@ -41,8 +41,6 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY src ./src
 COPY scripts ./scripts
-COPY alembic.ini ./
-COPY alembic ./alembic
 
 EXPOSE 8080
 
