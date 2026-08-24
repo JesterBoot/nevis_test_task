@@ -44,8 +44,9 @@ addopts = "-q"
 asyncio_mode = "auto"
 markers = [
     "database: tests requiring a PostgreSQL database with pgvector",
+    "semantic: tests requiring the local MiniLM embedding model",
 ]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 
 [tool.setuptools]
