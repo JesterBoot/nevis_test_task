@@ -135,6 +135,12 @@ async def _search_documents(
         .join(Document, Document.id == DocumentChunk.document_id)
         .where(DocumentChunk.id.in_(candidate_chunk_ids))
         .where(raw_cosine >= settings.semantic_similarity_threshold)
+        .order_by(
+            Document.id,
+            raw_cosine.desc(),
+            DocumentChunk.position,
+            DocumentChunk.id,
+        )
     )
     rows = (await session.exec(scored_statement)).all()
 
@@ -144,11 +150,13 @@ async def _search_documents(
                 document.id,
                 document.client_id,
                 document.title,
-                document.content,
+                chunk.content,
                 float(similarity),
                 document.id in lexical_document_ids,
+                chunk.position,
+                chunk.id,
             )
-            for _, similarity, document in rows
+            for chunk, similarity, document in rows
         ),
         threshold=settings.semantic_similarity_threshold,
         fts_boost=settings.fts_boost,
@@ -158,7 +166,7 @@ async def _search_documents(
 
 
 def rank_document_candidates(
-    rows: Iterable[tuple[UUID, UUID, str, str, float, bool]],
+    rows: Iterable[tuple[UUID, UUID, str, str, float, bool, int, UUID]],
     *,
     threshold: float,
     fts_boost: float,
@@ -172,6 +180,8 @@ def rank_document_candidates(
         content,
         similarity,
         lexical_match,
+        chunk_position,
+        chunk_id,
     ) in rows:
         if similarity < threshold:
             continue
@@ -185,11 +195,22 @@ def rank_document_candidates(
                 snippet=_snippet(content, snippet_length),
                 best_raw_cosine=similarity,
                 lexical_match=lexical_match,
+                best_chunk_position=chunk_position,
+                best_chunk_id=chunk_id,
             )
             continue
 
         existing.lexical_match = existing.lexical_match or lexical_match
-        existing.best_raw_cosine = max(existing.best_raw_cosine, similarity)
+        is_better_chunk = similarity > existing.best_raw_cosine or (
+            similarity == existing.best_raw_cosine
+            and (chunk_position, str(chunk_id))
+            < (existing.best_chunk_position, str(existing.best_chunk_id))
+        )
+        if is_better_chunk:
+            existing.best_raw_cosine = similarity
+            existing.snippet = _snippet(content, snippet_length)
+            existing.best_chunk_position = chunk_position
+            existing.best_chunk_id = chunk_id
 
     matches = [
         DocumentSearchMatch(

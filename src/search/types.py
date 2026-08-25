@@ -40,3 +40,5 @@ class DocumentRankingCandidate:
     snippet: str
     best_raw_cosine: float
     lexical_match: bool
+    best_chunk_position: int
+    best_chunk_id: UUID

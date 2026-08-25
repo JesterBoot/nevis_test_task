@@ -292,6 +292,38 @@ async def test_multiple_chunks_are_collapsed_and_boosted_once(
     assert [result["id"] for result in document_results] == [str(document.id)]
 
 
+@pytest.mark.asyncio
+async def test_multi_chunk_search_returns_best_chunk_snippet(
+    search_context: tuple[
+        FastAPI,
+        AsyncSession,
+        SearchFixtureEmbeddingProvider,
+    ],
+) -> None:
+    application, session, _ = search_context
+    client = await _persist_client(session)
+    document = await _persist_document(
+        session,
+        client.id,
+        title="Proof of address",
+        content="Document-level source content.",
+        embedding=_unit_vector(1),
+        extra_embedding=_unit_vector(0),
+    )
+
+    with TestClient(application) as api_client:
+        response = api_client.get("/search", params={"q": "address proof"})
+
+    assert response.status_code == 200
+    document_results = [
+        result
+        for result in response.json()
+        if result["type"] == "document"
+    ]
+    assert [result["id"] for result in document_results] == [str(document.id)]
+    assert document_results[0]["snippet"] == "Address proof lexical phrase."
+
+
 @pytest.mark.parametrize(
     "params",
     [

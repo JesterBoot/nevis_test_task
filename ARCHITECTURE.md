@@ -228,6 +228,9 @@ The threshold is applied before the boost. A lexical match cannot resurrect a
 document whose raw semantic similarity is below the threshold. The lexical match
 may be on a different chunk from the chunk that provides the best semantic score.
 Multiple chunks from one document are collapsed to one document-level result.
+The public snippet comes from the surviving chunk with the highest raw cosine
+similarity. Equal similarities use chunk position and then chunk UUID as
+deterministic tie-breakers.
 
 The internal score is not exposed by the public API. Search results contain only
 safe entity metadata and a bounded document snippet.
