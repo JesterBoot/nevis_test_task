@@ -58,7 +58,7 @@ def test_create_client_normalizes_email_and_preserves_public_contract(
             "first_name": "Anton",
             "last_name": "Batiaev",
             "email": " Anton.Batiaev@NevisWealth.com ",
-            "countryOfResidence": "ME",
+            "countryOfResidence": "GB",
         },
     )
 
@@ -67,7 +67,7 @@ def test_create_client_normalizes_email_and_preserves_public_contract(
     assert body["first_name"] == "Anton"
     assert body["last_name"] == "Batiaev"
     assert body["email"] == "anton.batiaev@neviswealth.com"
-    assert body["countryOfResidence"] == "ME"
+    assert body["countryOfResidence"] == "GB"
     assert "normalized_email" not in body
     assert "email_domain" not in body
     assert "email_domain_label" not in body

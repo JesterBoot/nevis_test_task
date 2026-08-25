@@ -45,7 +45,7 @@ def _client(
         normalized_email=normalized_email,
         email_domain="neviswealth.com",
         email_domain_label="neviswealth",
-        country_of_residence="ME",
+        country_of_residence="GB",
     )
 
 
