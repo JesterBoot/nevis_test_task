@@ -1,6 +1,6 @@
-.PHONY: install test test-all test-semantic test-db compile check run migrate downgrade-migration \
-	make-migration show-heads docker-config docker-build docker-up docker-down \
-	docker-logs
+.PHONY: install check-fix format sort-imports test test-all test-semantic test-db \
+	compile check run migrate downgrade-migration make-migration show-heads \
+	docker-config docker-build docker-up docker-down docker-logs
 
 UV ?= uv
 DC ?= docker compose
@@ -26,7 +26,7 @@ test:
 test-all:
 	$(UV) run pytest
 
-# first run api service
+# Requires the Docker API service to be running so the named model volume is used.
 test-semantic:
 	$(DC) exec $(API_SERVICE) /app/.venv/bin/python scripts/semantic_spike.py
 
@@ -41,6 +41,9 @@ check:
 	$(UV) run ruff check src tests scripts
 	$(MAKE) compile
 	$(MAKE) test
+
+run:
+	$(UV) run python src/main.py
 
 migrate:
 	$(DC) exec $(API_SERVICE) /app/.venv/bin/alembic \

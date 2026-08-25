@@ -55,12 +55,8 @@ cover/
 *.mo
 *.pot
 
-# Django stuff:
+# Local runtime artifacts
 *.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-nevis.db
 model-cache/
 
 # Flask stuff:

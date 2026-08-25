@@ -4,5 +4,4 @@
 __pycache__
 .pytest_cache
 *.pyc
-nevis.db
 model-cache
