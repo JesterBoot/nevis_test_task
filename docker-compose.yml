@@ -45,6 +45,18 @@ services:
       - "${API_PORT}:${API_CONTAINER_PORT}"
     volumes:
       - model_cache:${DOCKER_MODEL_CACHE_DIR}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/ready')",
+        ]
+      interval: ${API_HEALTHCHECK_INTERVAL:-10s}
+      timeout: ${API_HEALTHCHECK_TIMEOUT:-5s}
+      retries: ${API_HEALTHCHECK_RETRIES:-10}
+      start_period: ${API_HEALTHCHECK_START_PERIOD:-15s}
 
 volumes:
   postgres_data:

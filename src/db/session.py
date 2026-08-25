@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession as _AsyncSession
@@ -106,8 +107,8 @@ async def tasks_session_context() -> AsyncIterator[AsyncSession]:
 
 async def check_conn_psql() -> bool:
     try:
-        async with engine.connect():
-            pass
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
         logger.info("Connected to PostgreSQL/SQL database")
         return True
     except Exception as exc:

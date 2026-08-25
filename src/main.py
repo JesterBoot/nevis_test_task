@@ -1,15 +1,15 @@
-from fastapi import FastAPI
+import os
 
-from core.custom_logging import configure_logging
+import uvicorn
 
-configure_logging()
-
-
-def create_app() -> FastAPI:
-    return FastAPI(
-        title="Nevis Backend API",
-        version="0.1.0",
-    )
-
+from core.setup import create_app
 
 app = create_app()
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        app,
+        host=os.getenv("API_HOST", "0.0.0.0"),
+        port=int(os.getenv("API_CONTAINER_PORT", "8080")),
+    )

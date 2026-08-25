@@ -80,7 +80,7 @@ def _client(
         email=email,
         normalized_email=normalized_email,
         email_domain="neviswealth.com",
-        email_domain_base="neviswealth",
+        email_domain_label="neviswealth",
         country_of_residence="ME",
     )
 
