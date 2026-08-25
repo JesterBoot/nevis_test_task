@@ -15,9 +15,10 @@ from models import Client, Document, DocumentChunk
 from schemas.documents import DocumentCreate
 from search.embeddings import FakeEmbeddingProvider
 from services.documents import create_document
+from tests.support.database import build_test_database_url
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATABASE_URL = Settings().database_url
+DATABASE_URL = build_test_database_url(Settings().database_url)
 
 pytestmark = [
     pytest.mark.database,

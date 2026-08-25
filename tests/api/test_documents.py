@@ -15,9 +15,10 @@ from models import Client, Document, DocumentChunk
 from schemas.documents import DocumentCreate
 from search.dependencies import get_embedding_provider
 from search.embeddings import FakeEmbeddingProvider
-from services.documents import create_document
+from services.documents import TransactionOwnershipError, create_document
+from tests.support.database import build_test_database_url
 
-DATABASE_URL = Settings().database_url
+DATABASE_URL = build_test_database_url(Settings().database_url)
 pytestmark = [
     pytest.mark.database,
     pytest.mark.skipif(
@@ -41,6 +42,17 @@ class RecordingEmbeddingProvider(FakeEmbeddingProvider):
 class FailingEmbeddingProvider(FakeEmbeddingProvider):
     def embed(self, texts: list[str]) -> list[list[float]]:
         raise RuntimeError("injected embedding failure")
+
+
+class TransactionStateEmbeddingProvider(FakeEmbeddingProvider):
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__()
+        self.session = session
+        self.transaction_states: list[bool] = []
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        self.transaction_states.append(self.session.in_transaction())
+        return super().embed(texts)
 
 
 @pytest_asyncio.fixture
@@ -290,6 +302,79 @@ async def test_persistence_failure_rolls_back_document_and_chunks(
 
     assert documents == []
     assert chunks == []
+
+
+@pytest.mark.asyncio
+async def test_embedding_runs_after_lookup_transaction_finishes(
+    document_api_context: tuple[
+        FastAPI,
+        async_sessionmaker[AsyncSession],
+        RecordingEmbeddingProvider,
+    ],
+) -> None:
+    _, session_factory, _ = document_api_context
+
+    async with session_factory() as session:
+        client = Client(
+            first_name="Anton",
+            last_name="Batiaev",
+            email="transaction-boundary@example.com",
+            normalized_email="transaction-boundary@example.com",
+            email_domain="example.com",
+            email_domain_label="example",
+        )
+        session.add(client)
+        await session.commit()
+
+        provider = TransactionStateEmbeddingProvider(session)
+        await create_document(
+            session,
+            client.id,
+            DocumentCreate(
+                title="Proof of address",
+                content="Utility bill.",
+            ),
+            provider,
+        )
+
+    assert provider.transaction_states == [False]
+
+
+@pytest.mark.asyncio
+async def test_external_transaction_is_not_rolled_back(
+    document_api_context: tuple[
+        FastAPI,
+        async_sessionmaker[AsyncSession],
+        RecordingEmbeddingProvider,
+    ],
+) -> None:
+    _, session_factory, _ = document_api_context
+
+    async with session_factory() as session:
+        client = Client(
+            first_name="Anton",
+            last_name="Batiaev",
+            email="external-transaction@example.com",
+            normalized_email="external-transaction@example.com",
+            email_domain="example.com",
+            email_domain_label="example",
+        )
+        session.add(client)
+        await session.commit()
+
+        async with session.begin():
+            with pytest.raises(TransactionOwnershipError):
+                await create_document(
+                    session,
+                    client.id,
+                    DocumentCreate(
+                        title="Proof of address",
+                        content="Utility bill.",
+                    ),
+                    FakeEmbeddingProvider(),
+                )
+
+            assert session.in_transaction()
 
 
 @pytest.mark.asyncio

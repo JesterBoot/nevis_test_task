@@ -59,7 +59,7 @@ class AsyncSession(_AsyncSession):
 
     async def execute(self, *args, **kwargs):
         try:
-            return await super().execute(*args, **kwargs)
+            return await super().exec(*args, **kwargs)
         except SQLAlchemyError as exc:
             await self.rollback()
             logger.error("Execute failed, transaction rolled back", exc_info=exc)

@@ -14,9 +14,10 @@ from db.session import AsyncSession, get_session
 from main import create_app
 from models import Client, Document, DocumentChunk
 from search.dependencies import get_embedding_provider
+from tests.support.database import build_test_database_url
 
 load_dotenv(override=False)
-DATABASE_URL = Settings().database_url
+DATABASE_URL = build_test_database_url(Settings().database_url)
 
 pytestmark = [
     pytest.mark.database,

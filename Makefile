@@ -43,7 +43,7 @@ check:
 	$(MAKE) test
 
 run:
-	$(UV) run python src/main.py
+	$(DC) up -d --build
 
 migrate:
 	$(DC) exec $(API_SERVICE) /app/.venv/bin/alembic \

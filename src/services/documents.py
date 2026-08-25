@@ -39,9 +39,10 @@ async def create_document(
         )
 
     async with session.begin():
-        client_exists = (
-            await session.exec(select(exists().where(Client.id == client_id)))
-        ).one()
+        result = await session.exec(
+            select(exists().where(Client.id == client_id))
+        )
+        client_exists = result.scalar_one()
 
     if not client_exists:
         raise ClientNotFoundError
