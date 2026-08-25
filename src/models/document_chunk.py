@@ -45,8 +45,6 @@ class DocumentChunk(SQLModel, table=True):
     )
     position: int = Field(sa_column=Column(Integer, nullable=False))
     content: str = Field(sa_column=Column(Text, nullable=False))
-    embedding: list[float] = Field(
-        sa_column=Column(Vector(384), nullable=False)
-    )
+    embedding: list[float] = Field(sa_column=Column(Vector(384), nullable=False))
 
     document: Optional["Document"] = Relationship(back_populates="chunks")

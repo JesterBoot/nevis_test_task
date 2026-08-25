@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     db_pool_recycle: int = Field(default=1_800, gt=0)
     db_pool_pre_ping: bool = True
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_dimension: int = Field(default=384, gt=0)
     model_cache_dir: Path = Path("./model-cache")
     model_ready_file: Path | None = None
 

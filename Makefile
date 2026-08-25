@@ -14,6 +14,15 @@ ALEMBIC_CONFIG ?= src/alembic.ini
 install:
 	$(UV) sync
 
+check-fix:
+	cd src && uv run ruff check . --fix
+
+format:
+	cd src && uv run ruff format .
+
+sort-imports:
+	cd src && uv run ruff check . --fix --select I
+
 test:
 	$(UV) run pytest
 
