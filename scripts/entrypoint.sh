@@ -7,6 +7,7 @@ MODEL_READY_FILE="${MODEL_READY_FILE:-${MODEL_CACHE_DIR}/.model-ready}"
 EMBEDDING_MODEL="${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}"
 API_HOST="${API_HOST:-0.0.0.0}"
 API_CONTAINER_PORT="${API_CONTAINER_PORT:-8080}"
+DEBUG="${DEBUG:-0}"
 
 mkdir -p "${MODEL_CACHE_DIR}"
 
@@ -25,6 +26,15 @@ fi
 
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
+
+if [ "${DEBUG}" = "1" ]; then
+    exec /app/.venv/bin/uvicorn \
+        main:app \
+        --host "${API_HOST}" \
+        --port "${API_CONTAINER_PORT}" \
+        --reload \
+        --reload-dir /app/src
+fi
 
 exec /app/.venv/bin/uvicorn \
     main:app \

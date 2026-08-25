@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from core.config import Settings
+from db.session import _build_engine_kwargs
 from main import create_app
 
 
@@ -64,6 +65,7 @@ def test_default_settings_are_bootstrap_safe() -> None:
     settings = Settings(_env_file=None)
 
     assert settings.database_url == "sqlite:///./nevis.db"
+    assert settings.debug is False
     assert settings.embedding_model == "sentence-transformers/all-MiniLM-L6-v2"
     assert settings.embedding_dimension == 384
     assert settings.max_document_chars == 50_000
@@ -87,6 +89,14 @@ def test_settings_can_be_overridden_by_environment(monkeypatch: pytest.MonkeyPat
     assert settings.embedding_dimension == 512
     assert settings.search_limit_max == 25
     assert settings.hf_hub_offline is True
+
+
+def test_debug_enables_database_sql_logging() -> None:
+    quiet_settings = Settings(_env_file=None, debug=False)
+    debug_settings = Settings(_env_file=None, debug=True)
+
+    assert _build_engine_kwargs(quiet_settings)["echo"] is False
+    assert _build_engine_kwargs(debug_settings)["echo"] is True
 
 
 @pytest.mark.parametrize(

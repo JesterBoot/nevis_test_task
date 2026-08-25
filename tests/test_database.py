@@ -15,6 +15,9 @@ from sqlmodel import select
 from core.config import Settings, get_settings
 from db.session import AsyncSession, build_async_engine
 from models import Client, Document, DocumentChunk
+from schemas.documents import DocumentCreate
+from search.embeddings import FakeEmbeddingProvider
+from services.documents import create_document
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(override=False)
@@ -231,6 +234,64 @@ async def test_document_delete_cascades_to_chunks(
         )
     ).all()
     assert remaining_chunks == []
+
+
+async def test_document_ingestion_persists_batched_vector_chunks(
+    session: AsyncSession,
+) -> None:
+    client = _client()
+    session.add(client)
+    await session.commit()
+
+    document = await create_document(
+        session,
+        client.id,
+        DocumentCreate(
+            title="Long proof of address",
+            content="x" * 2_000,
+        ),
+        FakeEmbeddingProvider(),
+    )
+
+    persisted_chunks = (
+        await session.exec(
+            select(DocumentChunk).where(DocumentChunk.document_id == document.id)
+        )
+    ).all()
+
+    assert len(persisted_chunks) == 3
+    assert all(len(chunk.embedding) == 384 for chunk in persisted_chunks)
+
+
+async def test_document_ingestion_rolls_back_after_persistence_failure(
+    session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _client()
+    session.add(client)
+    await session.commit()
+
+    async def failing_flush(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("injected persistence failure")
+
+    monkeypatch.setattr(session, "flush", failing_flush)
+
+    with pytest.raises(RuntimeError, match="injected persistence failure"):
+        await create_document(
+            session,
+            client.id,
+            DocumentCreate(
+                title="Proof of address",
+                content="Utility bill issued in August.",
+            ),
+            FakeEmbeddingProvider(),
+        )
+
+    documents = (await session.exec(select(Document))).all()
+    chunks = (await session.exec(select(DocumentChunk))).all()
+
+    assert documents == []
+    assert chunks == []
 
 
 def test_migration_downgrade_and_reupgrade() -> None:

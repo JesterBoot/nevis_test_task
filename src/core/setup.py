@@ -22,12 +22,10 @@ def create_app() -> FastAPI:
     application = FastAPI(
         title="Nevis Backend API",
         version="0.1.0",
+        debug=settings.debug,
         lifespan=lifespan,
     )
     application.state.startup_ok = False
     application.state.settings = settings
     application.include_router(api_router)
     return application
-
-
-__all__ = ("create_app",)

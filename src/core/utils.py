@@ -1,4 +1,5 @@
-from core.custom_logging import get_logger
+from structlog import get_logger
+
 from db.session import check_conn_psql
 
 logger = get_logger()
@@ -9,6 +10,3 @@ async def check_startup_dependencies() -> bool:
     if not database_ok:
         logger.error("Startup dependency check failed")
     return database_ok
-
-
-__all__ = ("check_startup_dependencies",)

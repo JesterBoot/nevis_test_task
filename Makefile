@@ -5,9 +5,6 @@
 UV ?= uv
 DC ?= docker compose
 API_SERVICE ?= api
-APP_MODULE ?= main:app
-APP_HOST ?= 0.0.0.0
-APP_PORT ?= 8080
 ALEMBIC ?= $(UV) run alembic
 ALEMBIC_CONFIG ?= src/alembic.ini
 
@@ -39,10 +36,7 @@ check:
 	$(MAKE) test
 
 run:
-	$(UV) run uvicorn --app-dir src $(APP_MODULE) \
-		--host $(APP_HOST) \
-		--port $(APP_PORT) \
-		--reload
+	$(UV) run python -m main
 
 migrate:
 	$(DC) exec $(API_SERVICE) /app/.venv/bin/alembic \
@@ -68,7 +62,7 @@ docker-build:
 	$(DC) build
 
 docker-up:
-	$(DC) up -d
+	$(DC) up -d --build
 
 docker-down:
 	$(DC) down

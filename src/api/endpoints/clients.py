@@ -30,6 +30,3 @@ async def create_client_endpoint(
         ) from exc
 
     return ClientResponse.model_validate(client)
-
-
-__all__ = ("router",)

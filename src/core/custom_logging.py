@@ -2,7 +2,6 @@ import logging
 import sys
 
 import structlog
-from structlog import get_logger
 
 
 def configure_logging(level: int | None = None) -> None:
@@ -26,9 +25,3 @@ def configure_logging(level: int | None = None) -> None:
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
     )
-
-
-__all__ = (
-    "configure_logging",
-    "get_logger",
-)

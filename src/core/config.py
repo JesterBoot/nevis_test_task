@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     )
 
     database_url: str = "sqlite:///./nevis.db"
+    debug: bool = False
     db_pool_size: int = Field(default=5, gt=0)
     db_max_overflow: int = Field(default=10, ge=0)
     db_pool_timeout: int = Field(default=30, gt=0)

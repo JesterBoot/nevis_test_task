@@ -32,7 +32,10 @@ async def readiness_check(request: Request) -> HealthStatus:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=HealthState.NOT_OK,
         )
-    return HealthStatus(status=HealthState.OK)
+    return HealthStatus(
+        status=HealthState.OK,
+        time=datetime.now(UTC),
+    )
 
 
 @router.get(
@@ -55,6 +58,3 @@ async def startup_check(
         status=HealthState.OK,
         time=datetime.now(UTC),
     )
-
-
-__all__ = ("router",)

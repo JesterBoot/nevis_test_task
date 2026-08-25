@@ -7,7 +7,7 @@ from schemas.clients import ClientCreate
 
 
 class DuplicateClientEmailError(Exception):
-    """Raised when the database rejects a duplicate normalized email."""
+    """Reject a duplicate normalized email"""
 
 
 def normalize_email(email: EmailStr | str) -> tuple[str, str, str]:
@@ -42,10 +42,3 @@ async def create_client(
 
     await session.refresh(client)
     return client
-
-
-__all__ = (
-    "DuplicateClientEmailError",
-    "create_client",
-    "normalize_email",
-)

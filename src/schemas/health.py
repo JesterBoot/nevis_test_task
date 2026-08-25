@@ -12,6 +12,3 @@ class HealthState(StrEnum):
 class HealthStatus(BaseModel):
     status: HealthState
     time: datetime | None = None
-
-
-__all__ = ("HealthState", "HealthStatus")

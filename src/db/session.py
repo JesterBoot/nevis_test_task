@@ -5,9 +5,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession as _AsyncSession
+from structlog import get_logger
 
 from core.config import Settings, get_settings
-from core.custom_logging import get_logger
 
 logger = get_logger()
 _settings = get_settings()
@@ -26,7 +26,7 @@ def _build_engine_kwargs(settings: Settings | None = None) -> dict[str, object]:
     database_url = _to_async_database_url(resolved_settings.database_url)
     kwargs: dict[str, object] = {
         "url": database_url,
-        "echo": False,
+        "echo": resolved_settings.debug,
         "future": True,
     }
 
@@ -114,14 +114,3 @@ async def check_conn_psql() -> bool:
     except Exception as exc:
         logger.critical("Database is not available", exc_info=exc)
         return False
-
-
-__all__ = (
-    "AsyncSession",
-    "async_session_factory",
-    "build_async_engine",
-    "check_conn_psql",
-    "engine",
-    "get_session",
-    "tasks_session_context",
-)
