@@ -88,7 +88,7 @@ def test_default_settings_are_bootstrap_safe(
 def test_settings_can_be_overridden_by_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@db/nevis")
     monkeypatch.setenv("MODEL_CACHE_DIR", "/tmp/nevis-models")
-    monkeypatch.setenv("EMBEDDING_DIMENSION", "512")
+    monkeypatch.setenv("EMBEDDING_DIMENSION", "384")
     monkeypatch.setenv("SEARCH_LIMIT_MAX", "25")
     monkeypatch.setenv("HF_HUB_OFFLINE", "1")
 
@@ -96,7 +96,7 @@ def test_settings_can_be_overridden_by_environment(monkeypatch: pytest.MonkeyPat
 
     assert settings.database_url == "postgresql+psycopg://user:pass@db/nevis"
     assert str(settings.model_cache_dir) == "/tmp/nevis-models"
-    assert settings.embedding_dimension == 512
+    assert settings.embedding_dimension == 384
     assert settings.search_limit_max == 25
     assert settings.hf_hub_offline is True
 

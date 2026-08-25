@@ -24,7 +24,7 @@ def _build_engine_kwargs(settings: Settings | None = None) -> dict[str, object]:
     database_url = _to_async_database_url(resolved_settings.database_url)
     kwargs: dict[str, object] = {
         "url": database_url,
-        "echo": resolved_settings.debug,
+        # "echo": resolved_settings.debug,
         "future": True,
     }
 
