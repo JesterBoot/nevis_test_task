@@ -1,4 +1,4 @@
-.PHONY: install test test-db compile check run migrate downgrade-migration \
+.PHONY: install test test-all test-semantic test-db compile check run migrate downgrade-migration \
 	make-migration show-heads docker-config docker-build docker-up docker-down \
 	docker-logs
 
@@ -21,7 +21,14 @@ sort-imports:
 	cd src && uv run ruff check . --fix --select I
 
 test:
+	$(UV) run pytest -m "not semantic"
+
+test-all:
 	$(UV) run pytest
+
+# first run api service
+test-semantic:
+	$(DC) exec $(API_SERVICE) /app/.venv/bin/python scripts/semantic_spike.py
 
 test-db:
 	$(UV) run pytest tests/test_database.py
@@ -34,9 +41,6 @@ check:
 	$(UV) run ruff check src tests scripts
 	$(MAKE) compile
 	$(MAKE) test
-
-run:
-	$(UV) run python -m main
 
 migrate:
 	$(DC) exec $(API_SERVICE) /app/.venv/bin/alembic \

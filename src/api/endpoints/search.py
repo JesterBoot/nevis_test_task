@@ -31,7 +31,7 @@ async def search_endpoint(
 ) -> list[SearchResult]:
     if not query.strip():
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Search query must contain non-whitespace characters.",
         )
 
@@ -40,7 +40,7 @@ async def search_endpoint(
     )
     if effective_limit > settings.search_limit_max:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 "Search limit must not exceed "
                 f"{settings.search_limit_max}."

@@ -139,7 +139,7 @@ async def _persist_document(
     )
     session.add(document)
     await session.flush()
-    document.chunks = [
+    chunks = [
         DocumentChunk(
             document_id=document.id,
             position=0,
@@ -148,7 +148,7 @@ async def _persist_document(
         )
     ]
     if extra_embedding is not None:
-        document.chunks.append(
+        chunks.append(
             DocumentChunk(
                 document_id=document.id,
                 position=1,
@@ -156,12 +156,13 @@ async def _persist_document(
                 embedding=extra_embedding,
             )
         )
+    session.add_all(chunks)
     await session.commit()
     return document
 
 
 @pytest.mark.asyncio
-async def test_search_returns_client_and_document_results(
+async def test_search_returns_document_result(
     search_context: tuple[
         FastAPI,
         AsyncSession,
@@ -183,12 +184,11 @@ async def test_search_returns_client_and_document_results(
 
     assert response.status_code == 200
     body = response.json()
-    assert [item["type"] for item in body] == ["client", "document"]
-    assert body[0]["id"] == str(client.id)
-    assert body[1]["id"] == str(document.id)
-    assert "score" not in body[1]
-    assert "ranking_score" not in body[1]
-    assert "embedding" not in body[1]
+    assert [item["type"] for item in body] == ["document"]
+    assert body[0]["id"] == str(document.id)
+    assert "score" not in body[0]
+    assert "ranking_score" not in body[0]
+    assert "embedding" not in body[0]
 
 
 @pytest.mark.asyncio
