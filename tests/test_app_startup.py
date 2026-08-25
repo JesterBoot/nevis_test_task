@@ -66,7 +66,23 @@ def test_readiness_returns_service_unavailable_before_successful_startup() -> No
 def test_default_settings_are_bootstrap_safe(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # Validate application defaults independently from Docker Compose runtime settings.
     monkeypatch.delenv("DEBUG", raising=False)
+    for variable in (
+        "DATABASE_URL",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_USER",
+        "DB_PASSWORD",
+        "POSTGRES_HOST",
+        "POSTGRES_PORT",
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+    ):
+        monkeypatch.delenv(variable, raising=False)
+
     settings = Settings(_env_file=None)
 
     assert settings.database_url == (
