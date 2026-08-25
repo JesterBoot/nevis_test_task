@@ -269,16 +269,6 @@ docker compose down
   indexing, and provider routing are documented as Future Work rather than MVP
   implementation scope.
 
-## Docker image measurement
-
-Measure the image and its largest layers with:
-
-```bash
-docker compose build --no-cache api
-docker compose images api
-docker history "$(docker compose images -q api)"
-```
-
 Verify the runtime uses CPU-only PyTorch:
 
 ```bash
