@@ -5,7 +5,7 @@ ARG UV_VERSION=0.7.20
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    UV_COMPILE_BYTECODE=1 \
+    UV_COMPILE_BYTECODE=0 \
     UV_LINK_MODE=copy \
     MODEL_CACHE_DIR=/opt/models \
     HF_HOME=/opt/models \
@@ -19,11 +19,11 @@ WORKDIR /app
 RUN python -m pip install --upgrade pip \
     && python -m pip install "uv==${UV_VERSION}"
 
-COPY pyproject.toml uv.lock README.md ./
-COPY src ./src
-COPY scripts ./scripts
+COPY pyproject.toml uv.lock ./
 
-RUN uv sync --locked --no-dev
+RUN uv sync --locked --no-dev --no-install-project \
+    && find /app/.venv -type d -name __pycache__ -prune -exec rm -rf {} + \
+    && find /app/.venv -type f -name '*.py[co]' -delete
 
 FROM python:3.13-slim AS runtime
 

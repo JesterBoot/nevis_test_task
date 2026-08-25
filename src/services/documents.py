@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from sqlalchemy import exists, select
+
 from core.config import Settings, get_settings
 from db.session import AsyncSession
 from models import Client, Document, DocumentChunk
@@ -17,6 +19,10 @@ class DocumentValidationError(Exception):
     """Raised when configured document limits are exceeded."""
 
 
+class TransactionOwnershipError(Exception):
+    """Raised when document ingestion is called inside an external transaction."""
+
+
 async def create_document(
     session: AsyncSession,
     client_id: UUID,
@@ -26,12 +32,19 @@ async def create_document(
     settings: Settings | None = None,
 ) -> Document:
     resolved_settings = settings or get_settings()
-    client = await session.get(Client, client_id)
-    if client is None:
-        raise ClientNotFoundError
 
     if session.in_transaction():
-        await session.rollback()
+        raise TransactionOwnershipError(
+            "Document ingestion requires a session without an active transaction."
+        )
+
+    async with session.begin():
+        client_exists = (
+            await session.exec(select(exists().where(Client.id == client_id)))
+        ).one()
+
+    if not client_exists:
+        raise ClientNotFoundError
 
     try:
         chunks = chunk_text(
@@ -74,7 +87,7 @@ async def create_document(
         for chunk in embedded_chunks
     ]
 
-    async with session.transaction():
+    async with session.begin():
         session.add(document)
         await session.flush()
 

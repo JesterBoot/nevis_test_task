@@ -21,15 +21,16 @@ multi-tenant authorization.
 
 ## 2. Technology choices
 
-| Concern         | MVP decision                                                        |
-|-----------------|---------------------------------------------------------------------|
-| API             | Python, FastAPI, and generated OpenAPI documentation                |
-| Persistence     | PostgreSQL with SQLModel on SQLAlchemy and Alembic                  |
-| Vector storage  | pgvector in the same PostgreSQL database                            |
-| Lexical search  | PostgreSQL full-text search plus normalized email-domain matching   |
-| Embeddings      | Local `sentence-transformers/all-MiniLM-L6-v2`, 384 dimensions, CPU |
-| Deployment      | Docker Compose; API exposed on port `8080`                          |
-| Background work | None; indexing is synchronous                                       |
+| Concern         | MVP decision                                                           |
+|-----------------|------------------------------------------------------------------------|
+| API             | Python, FastAPI, and generated OpenAPI documentation                   |
+| Persistence     | PostgreSQL with SQLModel on SQLAlchemy and Alembic                     |
+| Vector storage  | pgvector in the same PostgreSQL database                               |
+| Lexical search  | PostgreSQL full-text search plus normalized email-domain matching      |
+| Embeddings      | Local `sentence-transformers/all-MiniLM-L6-v2`, 384 dimensions, CPU    |
+| ML runtime      | CPU-only PyTorch on Linux Docker builds; no CUDA, NVIDIA, or Triton    |
+| Deployment      | Docker Compose; API exposed on port `8080`                             |
+| Background work | None; indexing is synchronous                                          |
 
 PostgreSQL is both the source of truth and the persistent vector store. A separate
 vector database is intentionally avoided because the expected dataset and deployment
@@ -47,6 +48,11 @@ model name after a successful load. Subsequent starts reuse the volume without a
 network request and force offline model loading before launching the application.
 The API creates the embedding provider lazily on the first ingestion request, then
 reuses one provider and model instance per application process.
+
+The Linux Docker dependency resolution uses the PyTorch CPU index so the runtime
+does not install CUDA, NVIDIA, or Triton packages. The inference backend remains
+PyTorch through the existing SentenceTransformers provider. Migrating to ONNX
+Runtime is explicitly out of scope for this MVP.
 
 `DEBUG=1` is the single development switch. It enables Uvicorn reload, FastAPI
 debug mode, and SQLAlchemy SQL logging. Docker Compose bind-mounts `./src` into
@@ -119,27 +125,32 @@ Document ingestion is deliberately split into preparation and persistence:
 ```text
 validate request
       |
-check client existence
+require no caller-owned transaction
       |
-close any transaction opened by the lookup
+owned client-existence lookup
+      |
+finish lookup transaction
       |
 deterministic chunking
       |
 generate all local embeddings in one batch from title + chunk text
       |
-BEGIN database transaction
+owned persistence transaction
       |
 persist document, chunks, and vectors
       |
 COMMIT
 ```
 
-Embedding inference must not run while a database transaction is open. A client
-lookup may cause SQLAlchemy to autobegin a transaction, so the current session
-rolls it back before CPU-bound inference when necessary. If validation, chunking,
-or inference fails, no database write has started. If persistence fails after
-`BEGIN`, the transaction is rolled back and no partial document or chunk state
-remains.
+`create_document()` requires a session without an already active caller-owned
+transaction. It owns and finishes the client-existence lookup transaction, then
+runs chunking and CPU-bound embedding inference with no database transaction open.
+It owns a separate persistence transaction for the document and chunks. The service
+never commits or rolls back an external transaction.
+
+If validation, chunking, or inference fails, no document write has started. If
+persistence fails after the owned transaction begins, the transaction is rolled
+back and no partial document or chunk state remains.
 
 Client existence is checked early to avoid unnecessary embedding work. The document
 foreign-key constraint remains the final client/document integrity boundary if a
@@ -374,6 +385,17 @@ The regression suite uses the same boundaries as the MVP implementation:
 If PostgreSQL/pgvector or the Docker model volume is unavailable, the affected
 checks report that explicitly; the relevant task is not considered complete until
 those checks pass in an environment with the required dependencies.
+
+Docker image optimization is measured with:
+
+```bash
+docker compose build --no-cache api
+docker compose images api
+docker history "$(docker compose images -q api)"
+```
+
+The model weights are intentionally absent from the image and are provisioned in
+the named `model_cache` volume at first API startup.
 
 ## 8. Future work
 

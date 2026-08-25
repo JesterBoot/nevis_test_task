@@ -12,6 +12,8 @@ combined client/document search.
 - `/health/live`, `/health/ready`, and `/health/startup`
 - PostgreSQL with pgvector as the only database backend
 - Local `sentence-transformers/all-MiniLM-L6-v2` embeddings
+- CPU-only PyTorch in the Linux Docker runtime; CUDA, NVIDIA, and Triton
+  runtime packages are intentionally excluded
 - Docker Compose with the API exposed on port `8080`
 - Alembic migrations and generated FastAPI OpenAPI/Swagger documentation
 
@@ -45,7 +47,6 @@ Alembic is configured by `src/alembic.ini` and points to `src/migrations`.
 
 Use Python 3.13 and Docker Compose.
 `uv sync` is only required for local development and test commands. Docker Compose provides the complete reviewer runtime.
-Docker Compose provides the complete reviewer runtime.
 
 ```bash
 cp .env.example .env
@@ -253,6 +254,9 @@ docker compose down
   avoiding a separate vector database for this small MVP.
 - Local embeddings avoid external API dependencies and data transfer, at the cost
   of higher CPU usage, model footprint, and first-start provisioning time.
+- The Docker runtime uses CPU-only PyTorch. An ONNX Runtime migration is
+  explicitly out of scope; the SentenceTransformers API and MiniLM model remain
+  unchanged.
 - Model weights are downloaded only during initial provisioning; subsequent
   inference runs offline from the Docker volume.
 - Chunking is deterministic: documents up to `1000` characters use one chunk;
@@ -264,3 +268,23 @@ docker compose down
 - Optional summaries, authentication, operational security controls, background
   indexing, and provider routing are documented as Future Work rather than MVP
   implementation scope.
+
+## Docker image measurement
+
+Measure the image and its largest layers with:
+
+```bash
+docker compose build --no-cache api
+docker compose images api
+docker history "$(docker compose images -q api)"
+```
+
+Verify the runtime uses CPU-only PyTorch:
+
+```bash
+docker compose exec api /app/.venv/bin/python -c \
+  "import torch; print(torch.__version__); print(torch.cuda.is_available())"
+```
+
+The expected CUDA availability output is `False`. Model weights are stored in
+the named `model_cache` volume and are not embedded in the API image.
