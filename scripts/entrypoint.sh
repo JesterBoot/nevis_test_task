@@ -27,6 +27,10 @@ fi
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 
+/app/.venv/bin/alembic \
+    -c /app/src/alembic.ini \
+    upgrade head
+
 if [ "${DEBUG}" = "1" ]; then
     exec /app/.venv/bin/uvicorn \
         main:app \
