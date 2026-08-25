@@ -8,18 +8,21 @@ from main import create_app
 
 
 def test_application_imports_without_database_connection() -> None:
-    with TestClient(create_app()) as client:
-        response = client.get("/openapi.json")
-        docs_response = client.get("/docs")
+    application = create_app()
+    client = TestClient(application)
+    response = client.get("/openapi.json")
+    docs_response = client.get("/docs")
+    client.close()
 
-        assert response.status_code == 200
-        assert docs_response.status_code == 200
-        assert response.json()["info"]["title"] == "Nevis Backend API"
-        assert response.json()["info"]["version"] == "0.1.0"
-        assert "/clients" in response.json()["paths"]
-        assert "/health/live" in response.json()["paths"]
+    assert response.status_code == 200
+    assert docs_response.status_code == 200
+    assert response.json()["info"]["title"] == "Nevis Backend API"
+    assert response.json()["info"]["version"] == "0.1.0"
+    assert "/clients" in response.json()["paths"]
+    assert "/health/live" in response.json()["paths"]
 
 
+@pytest.mark.database
 def test_health_checks_report_liveness_and_readiness() -> None:
     with TestClient(create_app()) as client:
         liveness_response = client.get("/health/live")
@@ -61,10 +64,15 @@ def test_readiness_returns_service_unavailable_before_successful_startup() -> No
     assert response.json()["detail"] == "not_ok"
 
 
-def test_default_settings_are_bootstrap_safe() -> None:
+def test_default_settings_are_bootstrap_safe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("DEBUG", raising=False)
     settings = Settings(_env_file=None)
 
-    assert settings.database_url == "sqlite:///./nevis.db"
+    assert settings.database_url == (
+        "postgresql+psycopg://nevis:nevis@127.0.0.1:5432/nevis"
+    )
     assert settings.debug is False
     assert settings.embedding_model == "sentence-transformers/all-MiniLM-L6-v2"
     assert settings.embedding_dimension == 384
@@ -73,10 +81,12 @@ def test_default_settings_are_bootstrap_safe() -> None:
     assert settings.chunk_overlap == 100
     assert settings.search_limit_default == 10
     assert settings.search_limit_max == 50
+    assert settings.search_snippet_length == 240
+    assert settings.semantic_similarity_threshold == 0.30
 
 
 def test_settings_can_be_overridden_by_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://user:pass@db/nevis")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@db/nevis")
     monkeypatch.setenv("MODEL_CACHE_DIR", "/tmp/nevis-models")
     monkeypatch.setenv("EMBEDDING_DIMENSION", "512")
     monkeypatch.setenv("SEARCH_LIMIT_MAX", "25")

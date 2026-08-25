@@ -1,26 +1,22 @@
-from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 from alembic import command
 from alembic.config import Config
-from dotenv import load_dotenv
 from sqlalchemy import create_engine, delete, inspect
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from core.config import Settings, get_settings
-from db.session import AsyncSession, build_async_engine
+from core.config import Settings
+from db.session import AsyncSession
 from models import Client, Document, DocumentChunk
 from schemas.documents import DocumentCreate
 from search.embeddings import FakeEmbeddingProvider
 from services.documents import create_document
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-load_dotenv(override=False)
 DATABASE_URL = Settings().database_url
 
 pytestmark = [
@@ -36,41 +32,6 @@ def _alembic_config() -> Config:
     config = Config(str(PROJECT_ROOT / "src" / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
     return config
-
-
-@pytest.fixture(scope="session", autouse=True)
-def migrated_schema() -> Iterator[None]:
-    get_settings.cache_clear()
-    config = _alembic_config()
-    command.upgrade(config, "head")
-    yield
-    get_settings.cache_clear()
-    command.downgrade(config, "base")
-
-
-@pytest_asyncio.fixture(scope="session")
-async def async_engine() -> AsyncIterator[AsyncEngine]:
-    settings = Settings(_env_file=None, database_url=DATABASE_URL)
-    engine = build_async_engine(settings)
-    yield engine
-    await engine.dispose()
-
-
-@pytest_asyncio.fixture
-async def session(async_engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
-    session_factory = async_sessionmaker(
-        async_engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
-    async with session_factory() as database_session:
-        await database_session.exec(delete(DocumentChunk))
-        await database_session.exec(delete(Document))
-        await database_session.exec(delete(Client))
-        await database_session.commit()
-        yield database_session
-        await database_session.rollback()
-
 
 def _client(
     *,

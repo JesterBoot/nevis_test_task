@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession as _AsyncSession
@@ -14,8 +14,6 @@ _settings = get_settings()
 
 
 def _to_async_database_url(url: str) -> str:
-    if url.startswith("sqlite://") and not url.startswith("sqlite+aiosqlite://"):
-        return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
     if url.startswith("postgresql://"):
         return url.replace("postgresql://", "postgresql+psycopg://", 1)
     return url
@@ -30,16 +28,15 @@ def _build_engine_kwargs(settings: Settings | None = None) -> dict[str, object]:
         "future": True,
     }
 
-    if not database_url.startswith("sqlite"):
-        kwargs.update(
-            {
-                "pool_size": resolved_settings.db_pool_size,
-                "max_overflow": resolved_settings.db_max_overflow,
-                "pool_timeout": resolved_settings.db_pool_timeout,
-                "pool_recycle": resolved_settings.db_pool_recycle,
-                "pool_pre_ping": resolved_settings.db_pool_pre_ping,
-            }
-        )
+    kwargs.update(
+        {
+            "pool_size": resolved_settings.db_pool_size,
+            "max_overflow": resolved_settings.db_max_overflow,
+            "pool_timeout": resolved_settings.db_pool_timeout,
+            "pool_recycle": resolved_settings.db_pool_recycle,
+            "pool_pre_ping": resolved_settings.db_pool_pre_ping,
+        }
+    )
 
     return kwargs
 
@@ -108,7 +105,7 @@ async def tasks_session_context() -> AsyncIterator[AsyncSession]:
 async def check_conn_psql() -> bool:
     try:
         async with engine.begin() as conn:
-            await conn.execute(text("SELECT 1"))
+            await conn.execute(select(1))
         logger.info("Connected to PostgreSQL/SQL database")
         return True
     except Exception as exc:

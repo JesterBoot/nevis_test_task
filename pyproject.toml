@@ -5,7 +5,6 @@ description = "MVP for the Nevis home task"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "aiosqlite>=0.20,<1",
     "alembic>=1.14,<2",
     "email-validator>=2.2,<3",
     "fastapi>=0.115,<1",

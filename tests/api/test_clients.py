@@ -4,28 +4,34 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlmodel import delete
 
+from core.config import Settings
 from db.session import AsyncSession, get_session
 from main import create_app
-from models import Client
+from models import Client, Document, DocumentChunk
 from services.clients import normalize_email
+
+DATABASE_URL = Settings().database_url
+pytestmark = [
+    pytest.mark.database,
+    pytest.mark.skipif(
+        not DATABASE_URL.startswith("postgresql"),
+        reason="Client API tests require PostgreSQL",
+    ),
+]
 
 
 @pytest_asyncio.fixture
-async def api_app() -> AsyncIterator[FastAPI]:
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-    )
-    async with engine.begin() as connection:
-        await connection.run_sync(Client.__table__.create)
-
-    session_factory = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
+async def api_app(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[FastAPI]:
+    async with session_factory() as session:
+        await session.exec(delete(DocumentChunk))
+        await session.exec(delete(Document))
+        await session.exec(delete(Client))
+        await session.commit()
 
     async def override_get_session() -> AsyncIterator[AsyncSession]:
         async with session_factory() as session:
@@ -35,7 +41,6 @@ async def api_app() -> AsyncIterator[FastAPI]:
     application.dependency_overrides[get_session] = override_get_session
     yield application
     application.dependency_overrides.clear()
-    await engine.dispose()
 
 
 @pytest.fixture

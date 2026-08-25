@@ -5,9 +5,10 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
-from sqlmodel import SQLModel, select
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlmodel import delete, select
 
+from core.config import Settings
 from db.session import AsyncSession, get_session
 from main import create_app
 from models import Client, Document, DocumentChunk
@@ -15,6 +16,15 @@ from schemas.documents import DocumentCreate
 from search.dependencies import get_embedding_provider
 from search.embeddings import FakeEmbeddingProvider
 from services.documents import create_document
+
+DATABASE_URL = Settings().database_url
+pytestmark = [
+    pytest.mark.database,
+    pytest.mark.skipif(
+        not DATABASE_URL.startswith("postgresql"),
+        reason="Document API tests require PostgreSQL with pgvector",
+    ),
+]
 
 
 class RecordingEmbeddingProvider(FakeEmbeddingProvider):
@@ -34,21 +44,20 @@ class FailingEmbeddingProvider(FakeEmbeddingProvider):
 
 
 @pytest_asyncio.fixture
-async def document_api_context() -> AsyncIterator[
-    tuple[FastAPI, AsyncEngine, RecordingEmbeddingProvider]
+async def document_api_context(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[
+    tuple[
+        FastAPI,
+        async_sessionmaker[AsyncSession],
+        RecordingEmbeddingProvider,
+    ]
 ]:
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-    )
-    async with engine.begin() as connection:
-        await connection.run_sync(SQLModel.metadata.create_all)
-
-    session_factory = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
+    async with session_factory() as session:
+        await session.exec(delete(DocumentChunk))
+        await session.exec(delete(Document))
+        await session.exec(delete(Client))
+        await session.commit()
 
     async def override_get_session() -> AsyncIterator[AsyncSession]:
         async with session_factory() as session:
@@ -58,16 +67,15 @@ async def document_api_context() -> AsyncIterator[
     application = create_app()
     application.dependency_overrides[get_session] = override_get_session
     application.dependency_overrides[get_embedding_provider] = lambda: provider
-    yield application, engine, provider
+    yield application, session_factory, provider
     application.dependency_overrides.clear()
-    await engine.dispose()
 
 
 @pytest.fixture
 def api_client(
     document_api_context: tuple[
         FastAPI,
-        AsyncEngine,
+        async_sessionmaker[AsyncSession],
         RecordingEmbeddingProvider,
     ],
 ) -> Iterator[TestClient]:
@@ -114,7 +122,7 @@ def test_unknown_client_returns_404_without_embedding(
     api_client: TestClient,
     document_api_context: tuple[
         FastAPI,
-        AsyncEngine,
+        async_sessionmaker[AsyncSession],
         RecordingEmbeddingProvider,
     ],
 ) -> None:
@@ -155,13 +163,11 @@ def test_document_size_limit_returns_422(
     api_client: TestClient,
     document_api_context: tuple[
         FastAPI,
-        AsyncEngine,
+        async_sessionmaker[AsyncSession],
         RecordingEmbeddingProvider,
     ],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from core.config import Settings
-
     limited_settings = Settings(
         _env_file=None,
         max_document_chars=10,
@@ -187,13 +193,11 @@ def test_chunk_count_limit_is_rejected_before_embedding(
     api_client: TestClient,
     document_api_context: tuple[
         FastAPI,
-        AsyncEngine,
+        async_sessionmaker[AsyncSession],
         RecordingEmbeddingProvider,
     ],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from core.config import Settings
-
     limited_settings = Settings(
         _env_file=None,
         max_document_chars=2_000,
@@ -220,7 +224,7 @@ def test_all_chunks_are_embedded_in_one_batch(
     api_client: TestClient,
     document_api_context: tuple[
         FastAPI,
-        AsyncEngine,
+        async_sessionmaker[AsyncSession],
         RecordingEmbeddingProvider,
     ],
 ) -> None:
@@ -235,9 +239,9 @@ def test_all_chunks_are_embedded_in_one_batch(
     assert response.status_code == 201
     assert len(document_api_context[2].calls) == 1
     assert document_api_context[2].calls[0] == [
-        content[:1_000],
-        content[900:1_900],
-        content[1_800:],
+        f"Long document\n\n{content[:1_000]}",
+        f"Long document\n\n{content[900:1_900]}",
+        f"Long document\n\n{content[1_800:]}",
     ]
 
 
@@ -245,17 +249,12 @@ def test_all_chunks_are_embedded_in_one_batch(
 async def test_persistence_failure_rolls_back_document_and_chunks(
     document_api_context: tuple[
         FastAPI,
-        AsyncEngine,
+        async_sessionmaker[AsyncSession],
         RecordingEmbeddingProvider,
     ],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _, engine, provider = document_api_context
-    session_factory = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
+    _, session_factory, provider = document_api_context
 
     async with session_factory() as session:
         client = Client(
@@ -286,12 +285,8 @@ async def test_persistence_failure_rolls_back_document_and_chunks(
             )
 
     async with session_factory() as verification_session:
-        documents = (
-            await verification_session.exec(select(Document))
-        ).all()
-        chunks = (
-            await verification_session.exec(select(DocumentChunk))
-        ).all()
+        documents = (await verification_session.exec(select(Document))).all()
+        chunks = (await verification_session.exec(select(DocumentChunk))).all()
 
     assert documents == []
     assert chunks == []
@@ -301,16 +296,11 @@ async def test_persistence_failure_rolls_back_document_and_chunks(
 async def test_embedding_failure_writes_nothing(
     document_api_context: tuple[
         FastAPI,
-        AsyncEngine,
+        async_sessionmaker[AsyncSession],
         RecordingEmbeddingProvider,
     ],
 ) -> None:
-    _, engine, _ = document_api_context
-    session_factory = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
+    _, session_factory, _ = document_api_context
 
     async with session_factory() as session:
         client = Client(
@@ -336,12 +326,8 @@ async def test_embedding_failure_writes_nothing(
             )
 
     async with session_factory() as verification_session:
-        documents = (
-            await verification_session.exec(select(Document))
-        ).all()
-        chunks = (
-            await verification_session.exec(select(DocumentChunk))
-        ).all()
+        documents = (await verification_session.exec(select(Document))).all()
+        chunks = (await verification_session.exec(select(DocumentChunk))).all()
 
     assert documents == []
     assert chunks == []

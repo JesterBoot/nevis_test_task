@@ -44,7 +44,11 @@ async def create_document(
     except ValueError as exc:
         raise DocumentValidationError(str(exc)) from exc
 
-    embeddings = provider.embed([chunk.content for chunk in chunks])
+    embedding_inputs = [
+        _document_chunk_embedding_text(payload.title, chunk.content)
+        for chunk in chunks
+    ]
+    embeddings = provider.embed(embedding_inputs)
     if len(embeddings) != len(chunks):
         raise ValueError("embedding provider returned an invalid batch length")
 
@@ -76,3 +80,7 @@ async def create_document(
 
     await session.refresh(document)
     return document
+
+
+def _document_chunk_embedding_text(title: str, chunk_content: str) -> str:
+    return f"{title}\n\n{chunk_content}"

@@ -18,7 +18,7 @@ class FixtureDocument:
 FIXTURE_DOCUMENTS = (
     FixtureDocument(
         name="utility_bill",
-        text="Proof of address. Utility bill issued in August.",
+        text="Proof of address\n\nUtility bill issued in August.",
     ),
     FixtureDocument(
         name="passport",
